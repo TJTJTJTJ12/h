@@ -1,0 +1,76 @@
+name: Build ClawEasy APK
+
+on:
+  push:
+    branches: [main, claweasy-build, claweasy-verify]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout ClawEasy patch kit
+        uses: actions/checkout@v4
+
+      - name: Checkout OpenClaw Android base
+        uses: actions/checkout@v4
+        with:
+          repository: mithun50/openclaw-termux
+          ref: v1.8.7
+          path: upstream
+
+      - name: Apply ClawEasy overlay
+        run: |
+          cp overlay/flutter_app/lib/screens/free_model_setup_screen.dart \
+             upstream/flutter_app/lib/screens/free_model_setup_screen.dart
+          python3 patch.py
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: stable
+          cache: true
+
+      - name: Fetch PRoot binaries
+        working-directory: upstream
+        run: bash scripts/fetch-proot-binaries.sh
+
+      - name: Install Flutter dependencies
+        working-directory: upstream/flutter_app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: upstream/flutter_app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build ARM64 APK
+        working-directory: upstream/flutter_app
+        run: flutter build apk --release --split-per-abi --target-platform android-arm64
+
+      - name: Collect APK
+        run: |
+          mkdir -p artifacts
+          cp upstream/flutter_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+             artifacts/ClawEasy-0.1.0-arm64.apk
+          sha256sum artifacts/ClawEasy-0.1.0-arm64.apk > artifacts/SHA256SUMS.txt
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClawEasy-Android-APK
+          path: artifacts/*
+          retention-days: 30
