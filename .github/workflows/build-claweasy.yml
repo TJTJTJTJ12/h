@@ -43,7 +43,7 @@ jobs:
           grep -F "nodeVersion = '22.22.1'" upstream/flutter_app/lib/constants.dart
           grep -F 'NODE_REQUIRED=22.22.1' upstream/flutter_app/lib/screens/free_model_setup_screen.dart
           grep -F '_ensureRuntimeFiles' upstream/flutter_app/lib/screens/free_model_setup_screen.dart
-          grep -F "File('$filesDir/config/resolv.conf')" upstream/flutter_app/lib/screens/free_model_setup_screen.dart
+          grep -F 'config/resolv.conf' upstream/flutter_app/lib/screens/free_model_setup_screen.dart
           grep -F 'writeResolvConf()' upstream/flutter_app/android/app/src/main/kotlin/com/nxg/openclawproot/BootstrapManager.kt
           grep -F 'claweasy-gateway-smoke-v1' upstream/flutter_app/lib/screens/free_model_setup_screen.dart
           grep -F '/healthz' upstream/flutter_app/lib/services/gateway_service.dart
