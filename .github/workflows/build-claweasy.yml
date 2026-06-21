@@ -28,17 +28,19 @@ jobs:
 
       - name: Apply ClawEasy overlays and runtime fixes
         run: |
-          python3 -m py_compile patch.py patch_runtime.py
+          python3 -m py_compile patch.py patch_runtime.py patch_runtime_fix.py
           cp overlay/flutter_app/lib/screens/free_model_setup_screen.dart \
              upstream/flutter_app/lib/screens/free_model_setup_screen.dart
           python3 patch.py
           python3 patch_runtime.py
+          python3 patch_runtime_fix.py
 
       - name: Verify reliability patches
         run: |
           grep -F 'openclaw@2026.6.9' upstream/flutter_app/lib/services/bootstrap_service.dart
           grep -F 'claweasy-gateway-smoke-v1' upstream/flutter_app/lib/screens/free_model_setup_screen.dart
           grep -F '/healthz' upstream/flutter_app/lib/services/gateway_service.dart
+          grep -F "join('\\n')" upstream/flutter_app/lib/services/gateway_service.dart
           grep -F -- '--allow-unconfigured --bind loopback --port 18789' \
             upstream/flutter_app/android/app/src/main/kotlin/com/nxg/openclawproot/GatewayService.kt
           grep -F 'version: 0.1.2+3' upstream/flutter_app/pubspec.yaml
