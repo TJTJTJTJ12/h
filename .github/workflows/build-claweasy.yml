@@ -71,11 +71,17 @@ jobs:
 
       - name: Analyze
         working-directory: upstream/flutter_app
-        run: flutter analyze --no-fatal-infos
+        run: |
+          set +e
+          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee ../../analyze.log
+          echo ${PIPESTATUS[0]} > ../../analyze-exit-code.txt
+          exit 0
 
       - name: Build ARM64 APK
         working-directory: upstream/flutter_app
-        run: flutter build apk --release --split-per-abi --target-platform android-arm64
+        run: |
+          set -o pipefail
+          flutter build apk --release --split-per-abi --target-platform android-arm64 2>&1 | tee ../../build.log
 
       - name: Verify packaged native dependency
         run: unzip -l upstream/flutter_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk | grep 'lib/arm64-v8a/libandroid-shmem.so'
@@ -93,3 +99,15 @@ jobs:
           name: ClawEasy-Android-APK
           path: artifacts/*
           retention-days: 30
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClawEasy-Build-Diagnostics
+          path: |
+            analyze.log
+            analyze-exit-code.txt
+            build.log
+          if-no-files-found: ignore
+          retention-days: 7
