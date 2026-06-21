@@ -3,6 +3,8 @@ name: Build ClawEasy APK
 on:
   push:
     branches: [claweasy-build]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
