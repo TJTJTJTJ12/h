@@ -49,6 +49,11 @@ jobs:
         working-directory: upstream
         run: bash scripts/fetch-proot-binaries.sh
 
+      - name: Verify PRoot native dependencies
+        run: |
+          test -f upstream/flutter_app/android/app/src/main/jniLibs/arm64-v8a/libandroid-shmem.so
+          readelf -d upstream/flutter_app/android/app/src/main/jniLibs/arm64-v8a/libproot.so | grep 'libandroid-shmem.so'
+
       - name: Install Flutter dependencies
         working-directory: upstream/flutter_app
         run: flutter pub get
@@ -61,12 +66,15 @@ jobs:
         working-directory: upstream/flutter_app
         run: flutter build apk --release --split-per-abi --target-platform android-arm64
 
+      - name: Verify packaged dependency
+        run: unzip -l upstream/flutter_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk | grep 'lib/arm64-v8a/libandroid-shmem.so'
+
       - name: Collect APK
         run: |
           mkdir -p artifacts
           cp upstream/flutter_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-             artifacts/ClawEasy-0.1.0-arm64.apk
-          sha256sum artifacts/ClawEasy-0.1.0-arm64.apk > artifacts/SHA256SUMS.txt
+             artifacts/ClawEasy-0.1.1-arm64.apk
+          sha256sum artifacts/ClawEasy-0.1.1-arm64.apk > artifacts/SHA256SUMS.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

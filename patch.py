@@ -92,6 +92,72 @@ replace(
 """,
 )
 
+# PRoot from the current Termux repository links against libandroid-shmem.so.
+# The upstream fetch script only packaged PRoot and libtalloc, which caused the
+# Android linker to abort before Ubuntu setup could begin.
+replace(
+    "scripts/fetch-proot-binaries.sh",
+    """    # Fetch libtalloc package
+    local talloc_dir="$extract_base/talloc"
+    if ! fetch_termux_pkg "libtalloc" "$deb_arch" "$talloc_dir"; then
+        return 1
+    fi
+
+    # Copy proot binary
+""",
+    """    # Fetch libtalloc package
+    local talloc_dir="$extract_base/talloc"
+    if ! fetch_termux_pkg "libtalloc" "$deb_arch" "$talloc_dir"; then
+        return 1
+    fi
+
+    # PRoot also links against Termux's Android shared-memory compatibility lib.
+    local shmem_dir="$extract_base/android-shmem"
+    if ! fetch_termux_pkg "libandroid-shmem" "$deb_arch" "$shmem_dir"; then
+        return 1
+    fi
+
+    # Copy proot binary
+""",
+)
+replace(
+    "scripts/fetch-proot-binaries.sh",
+    """    if [ -n "$talloc_lib" ]; then
+        # Resolve symlink and copy actual file
+        cp -L "$talloc_lib" "$out_dir/libtalloc.so"
+        chmod 755 "$out_dir/libtalloc.so"
+    else
+        echo "  [$jni_abi] WARN: libtalloc not found"
+    fi
+
+    echo "  [$jni_abi] OK — $(ls "$out_dir"/ | tr '\\n' ' ')"
+""",
+    """    if [ -n "$talloc_lib" ]; then
+        # Resolve symlink and copy actual file
+        cp -L "$talloc_lib" "$out_dir/libtalloc.so"
+        chmod 755 "$out_dir/libtalloc.so"
+    else
+        echo "  [$jni_abi] WARN: libtalloc not found"
+    fi
+
+    # Package the dependency under its real SONAME so Android's linker can
+    # resolve it when launching libproot.so from nativeLibraryDir.
+    local shmem_lib
+    shmem_lib=$(find "$shmem_dir" \
+        \( -name "libandroid-shmem.so" -o -name "libandroid-shmem.so.*" \) \
+        \( -type f -o -type l \) | head -1)
+    if [ -n "$shmem_lib" ]; then
+        cp -L "$shmem_lib" "$out_dir/libandroid-shmem.so"
+        chmod 755 "$out_dir/libandroid-shmem.so"
+    else
+        echo "  [$jni_abi] ERROR: libandroid-shmem not found"
+        return 1
+    fi
+
+    echo "  [$jni_abi] OK — $(ls "$out_dir"/ | tr '\\n' ' ')"
+""",
+)
+
 # Brand it as a separate install so it can coexist with the upstream app.
 replace("flutter_app/lib/app.dart", "title: 'OpenClaw',", "title: 'ClawEasy',")
 replace("flutter_app/lib/screens/dashboard_screen.dart", "title: const Text('OpenClaw'),", "title: const Text('ClawEasy'),")
@@ -104,6 +170,6 @@ replace(
     "description: OpenClaw AI Gateway for Android - standalone, no Termux required.",
     "description: One-tap OpenClaw Android setup with automatic free-model configuration.",
 )
-replace("flutter_app/pubspec.yaml", "version: 1.8.7+18", "version: 0.1.0+1")
+replace("flutter_app/pubspec.yaml", "version: 1.8.7+18", "version: 0.1.1+2")
 
 print("ClawEasy patch applied successfully")
